@@ -624,7 +624,35 @@ class Orchestrateur:
         families, and look in your traces for a case where several models agree
         on a wrong value.
         """
-        raise NotImplementedError("vote_k_sur_n: to implement in TD 2 (see the procedure in the docstring).")
+        n = len(traces_question)
+
+        if not (n // 2 < k <= n):
+            raise ValueError("k must be a strict majority: n // 2 < k <= n")
+
+        cles = [(p.provider, p.model_requested) for p in traces_question]
+        if len(set(cles)) != len(cles):
+            raise ValueError("duplicate (provider, model_requested): not a second vote")
+
+        votants = [p for p in traces_question
+                   if p.verdict == "executed" and p.value is not None]
+
+        comptes = {}
+        for p in votants:
+            comptes[p.value] = comptes.get(p.value, 0) + 1
+
+        plus_grand = max(comptes.values(), default=0)
+
+        for valeur, nb in comptes.items():
+            if nb >= k:
+                return {
+                    "consensus": True,
+                    "value": valeur,
+                    "votes": nb,
+                    "models": [f"{p.provider}:{p.model_requested}"
+                               for p in votants if p.value == valeur],
+                }
+
+        return {"consensus": False, "value": None, "votes": plus_grand, "models": []}
 
 
 # ==========================================================================
